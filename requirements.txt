@@ -1,0 +1,7 @@
+tkinter
+logging
+sqlite3
+subprocess
+socket
+
+# Third-party libraries requests
