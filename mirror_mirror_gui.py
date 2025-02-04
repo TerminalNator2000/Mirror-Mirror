@@ -37,6 +37,9 @@ class MirrorMirrorApp:
         self.connect_button = tk.Button(master, text="Generate Reverse Shell", command=self.connect_to_server)
         self.connect_button.pack(pady=5)
 
+        self.reset_button = tk.Button(master, text="Reset Fields", command=self.reset_fields)
+        self.reset_button.pack(pady=5)
+
         # Shell Type Selection Dropdown
         self.shell_type_var = tk.StringVar(master)
         self.shell_type_var.set("bash")  # Set default value
@@ -77,6 +80,19 @@ class MirrorMirrorApp:
         # Connect to the SQLite database
         self.conn = sqlite3.connect('mirror_mirror.db')
         self.cursor = self.conn.cursor()
+
+    def reset_fields(self):
+        # Clear all input fields and text areas
+        self.ip_address_entry.delete(0, tk.END)
+        self.connect_to_port_entry.delete(0, tk.END)
+        self.send_from_port_entry.delete(0, tk.END)
+        self.listen_on_port_entry.delete(0, tk.END)
+        self.logs_text.delete(1.0, tk.END)
+        self.next_best_actions_text.delete(1.0, tk.END)
+        self.shell_input_entry.delete(0, tk.END)
+        self.shell_output_text.delete(1.0, tk.END)
+        self.shell_type_var.set("bash")  # Reset shell type to default
+        self.log_message("All fields and logs have been reset.", logging.INFO)
 
     def send_shell_command(self):
         command = self.shell_input_entry.get()
@@ -130,7 +146,12 @@ class MirrorMirrorApp:
             # Setting up the socket
             self.log_message(f"Attempting to create socket on ports: send from {send_from_port}, listen on {listen_on_port}.")
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.bind(("", send_from_port))
+            try:
+                client_socket.bind(("", send_from_port))
+            except OSError as e:
+                self.log_message(f"Port {send_from_port} is already in use. Please select a different port.", logging.ERROR)
+                return
+
             client_socket.settimeout(10)  # Increased timeout for debugging
 
             server_address = (ip_address, connect_to_port)
@@ -190,3 +211,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = MirrorMirrorApp(root)
     root.mainloop()
+
