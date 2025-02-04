@@ -1,6 +1,3 @@
-![image](https://github.com/user-attachments/assets/26517dbb-22ac-412c-a171-35e71a322651)
-
-
 
 # Mirror Mirror Application
 
